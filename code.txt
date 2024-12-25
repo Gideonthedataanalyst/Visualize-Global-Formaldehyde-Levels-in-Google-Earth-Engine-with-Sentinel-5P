@@ -1,0 +1,77 @@
+// Import the FAO GAUL dataset and filter for East Africa's boundaries
+var countries = ['Kenya', 'Uganda', 'Tanzania', 'Rwanda', 'Burundi'];
+var dataset = ee.FeatureCollection("FAO/GAUL/2015/level1")
+  .filter(ee.Filter.inList('ADM0_NAME', countries));
+
+// Display the boundaries of East Africa
+Map.addLayer(dataset, {color: 'blue'}, 'East Africa Boundary');
+
+// Load the S5P HCHO ImageCollection and filter by date range
+var collection = ee.ImageCollection('COPERNICUS/S5P/OFFL/L3_HCHO')                   
+  .select('tropospheric_HCHO_column_number_density')
+  .filterDate('2019-06-01', '2019-06-06');
+
+// Define visualization parameters
+var band_viz = {
+  min: 0.0,
+  max: 0.0003,
+  palette: ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red']
+};
+
+// Calculate the mean HCHO levels over the specified time range and clip to East Africa boundary
+var hchoMean = collection.mean().clip(dataset);
+
+// Add the HCHO layer to the map with a title
+Map.addLayer(hchoMean, band_viz, 'Formaldehyde (HCHO) over East Africa 2019');
+
+// Center the map on East Africa
+Map.centerObject(dataset, 5);
+
+// Optional: Add a label to the map to indicate the title
+var title = ui.Label('Formaldehyde (HCHO) Concentration 2019 in East Africa', {
+  fontSize: '20px',
+  backgroundColor: 'white',
+  padding: '8px',
+  position: 'top-center',
+  color: 'black'
+});
+
+// Add the title to the map
+Map.add(title);
+
+// Create a legend
+var legend = ui.Panel({
+  style: {position: 'bottom-right', padding: '8px'}
+});
+
+// Add title to the legend
+legend.add(ui.Label('Legend', {fontWeight: 'bold', fontSize: '14px'}));
+
+// Define the legend colors and values
+var palette = ['black', 'blue', 'purple', 'cyan', 'green', 'yellow', 'red'];
+var values = [0.0, 0.00003, 0.00006, 0.0001, 0.00015, 0.0002, 0.0003];
+
+// Add color boxes and corresponding labels to the legend
+for (var i = 0; i < palette.length; i++) {
+  var colorBox = ui.Label({
+    style: {
+      backgroundColor: palette[i],
+      padding: '8px',
+      margin: '2px',
+      border: '1px solid black'
+    }
+  });
+  
+  var valueLabel = ui.Label({
+    value: values[i].toString(),
+    style: {margin: '2px'}
+  });
+
+  legend.add(ui.Panel({
+    widgets: [colorBox, valueLabel],
+    layout: ui.Panel.Layout.Flow('horizontal')
+  }));
+}
+
+// Add the legend to the map
+Map.add(legend);
